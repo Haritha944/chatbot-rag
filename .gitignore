@@ -1,0 +1,36 @@
+# Virtual environment
+.venv/
+env/
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+
+# IDE/editor files
+.vscode/
+.idea/
+*.swp
+
+# Logs and databases
+*.log
+*.sqlite3
+*.db
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Jupyter notebooks checkpoints
+.ipynb_checkpoints/
+
+# Environment/config files
+.env
+.env.*
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+/.history
+/chroma_db
+/data
