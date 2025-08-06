@@ -1,0 +1,68 @@
+# Docker Compose for Conversational RAG API
+version: '3.8'
+
+services:
+  chatbot-rag:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      # LLM Settings
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - MODEL_NAME=llama-3.3-70b-versatile
+      - TEMPERATURE=0.7
+      
+      # Vector Store Settings
+      - VECTOR_STORE_TYPE=chroma
+      - VECTOR_STORE_PATH=./chroma_db
+      
+      # Memory Settings
+      - MEMORY_TYPE=buffer
+      - MAX_TOKEN_LIMIT=2000
+      
+      # Session Storage Settings
+      - SESSION_STORE_TYPE=sqlite
+      - SESSION_DB_PATH=./data/sessions.db
+      - SESSION_TTL=3600
+      
+      # Production Settings
+      - MAX_CACHED_SESSIONS=100
+      - CLEANUP_INTERVAL=300
+      - DB_CONNECTION_POOL_SIZE=10
+      - MAX_CONCURRENT_REQUESTS=50
+    
+    volumes:
+      # Persist data and vector store
+      - ./data:/app/data
+      - ./chroma_db:/app/chroma_db
+      - ./logs:/app/logs
+    
+    restart: unless-stopped
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Optional: Nginx reverse proxy for production
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro  # If using SSL certificates
+    depends_on:
+      - chatbot-rag
+    restart: unless-stopped
+    profiles:
+      - production
+
+networks:
+  default:
+    name: chatbot-rag-network
