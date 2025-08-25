@@ -63,15 +63,18 @@ RUN mkdir -p /app/data /app/chroma_db /app/logs /home/appuser/.cache && \
 ENV HF_HOME=/home/appuser/.cache/huggingface \
     TRANSFORMERS_CACHE=/home/appuser/.cache/huggingface/transformers \
     HF_DATASETS_CACHE=/home/appuser/.cache/huggingface/datasets \
-    PRELOAD_MODEL=false
+    PRELOAD_MODEL=false \
+    TOKENIZERS_PARALLELISM=false \
+    OMP_NUM_THREADS=1 \
+    PYTORCH_TRANSFORMERS_CACHE=/home/appuser/.cache/huggingface/transformers
 
 # Create HuggingFace cache directories with proper permissions
 RUN mkdir -p /home/appuser/.cache/huggingface/transformers /home/appuser/.cache/huggingface/datasets && \
     chown -R appuser:appuser /home/appuser/.cache
 
-# Pre-download the sentence transformer model during build (optional but recommended)
-RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')" && \
-    chown -R appuser:appuser /home/appuser/.cache
+# Pre-download the sentence transformer model during build (DISABLED for memory optimization)
+# RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')" && \
+#     chown -R appuser:appuser /home/appuser/.cache
 
 # Switch to non-root user
 USER appuser

@@ -4,7 +4,10 @@ import uuid
 from typing import List, Optional
 import chromadb
 from langchain_community.vectorstores import Chroma
-from langchain_huggingface import HuggingFaceEmbeddings
+try:
+    from langchain_huggingface import HuggingFaceEmbeddings
+except ImportError:
+    from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.schema import Document
 from app.common.file_loader import FileLoader
@@ -22,11 +25,21 @@ class VectorStoreService:
             # Ensure HuggingFace cache directories exist and are writable
             self._setup_cache_directories()
             
-            # Initialize embeddings with better error handling
-            self.embeddings = HuggingFaceEmbeddings(
-                model_name="sentence-transformers/all-MiniLM-L6-v2",
-                cache_folder=os.getenv('HF_HOME', os.path.expanduser('~/.cache/huggingface'))
-            )
+            # Use memory-efficient embeddings for constrained environments
+            try:
+                from app.services.lightweight_embeddings import create_memory_efficient_embeddings
+                self.embeddings = create_memory_efficient_embeddings()
+                logger.info("Memory-efficient embeddings initialized successfully")
+            except Exception as embed_error:
+                logger.warning(f"Lightweight embeddings failed: {embed_error}")
+                # Fallback to standard HuggingFace with optimizations
+                self.embeddings = HuggingFaceEmbeddings(
+                    model_name="sentence-transformers/all-MiniLM-L6-v2",
+                    cache_folder=os.getenv('HF_HOME', os.path.expanduser('~/.cache/huggingface')),
+                    model_kwargs={'device': 'cpu'},  # Force CPU to save GPU memory
+                    encode_kwargs={'normalize_embeddings': True, 'batch_size': 1}  # Reduce batch size
+                )
+                logger.info("Standard HuggingFace embeddings initialized with optimizations")
             logger.info("HuggingFace embeddings initialized successfully")
         except Exception as e:
             logger.error(f"Failed to initialize embeddings: {str(e)}")

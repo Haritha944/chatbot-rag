@@ -8,6 +8,14 @@ services:
     plan: starter  # or a paid plan for better performance
     dockerfilePath: ./Dockerfile
     envVars:
+      # Memory optimization settings
+      - key: TOKENIZERS_PARALLELISM
+        value: false
+      - key: OMP_NUM_THREADS
+        value: "1"
+      - key: PYTORCH_TRANSFORMERS_CACHE
+        value: /home/appuser/.cache/huggingface/transformers
+      # Cache directories
       - key: HF_HOME
         value: /home/appuser/.cache/huggingface
       - key: TRANSFORMERS_CACHE
@@ -16,6 +24,21 @@ services:
         value: /home/appuser/.cache/huggingface/datasets
       - key: PRELOAD_MODEL
         value: false
+      # Memory-efficient app settings
+      - key: MEMORY_TYPE
+        value: buffer_window
+      - key: MAX_TOKEN_LIMIT
+        value: "1000"
+      - key: MAX_CACHED_SESSIONS
+        value: "25"
+      - key: CLEANUP_INTERVAL
+        value: "180"
+      - key: SESSION_TTL
+        value: "1800"
+      - key: DB_CONNECTION_POOL_SIZE
+        value: "3"
+      - key: MAX_CONCURRENT_REQUESTS
+        value: "10"
       # Add your API keys here
       - key: GROQ_API_KEY
         sync: false  # Set this in Render dashboard for security

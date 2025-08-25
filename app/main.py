@@ -24,7 +24,7 @@ app.add_middleware(
 
 app.include_router(chat.router, prefix="/api/v1/chat", tags=["Chat"])
 app.include_router(ingest.router, prefix="/api/v1/ingest", tags=["Document Ingestion"]) 
-app.include_router(sessions.router, prefix="/api/v1/sessions", tags=["Session Management"])
+
 
 @app.on_event("startup")
 async def startup_event():
