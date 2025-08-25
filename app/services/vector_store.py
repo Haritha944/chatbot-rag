@@ -19,17 +19,50 @@ class VectorStoreService:
         logger.info("Initializing Vector Store Service")
         
         try:
+            # Ensure HuggingFace cache directories exist and are writable
+            self._setup_cache_directories()
+            
+            # Initialize embeddings with better error handling
             self.embeddings = HuggingFaceEmbeddings(
-                model_name="sentence-transformers/all-MiniLM-L6-v2"
+                model_name="sentence-transformers/all-MiniLM-L6-v2",
+                cache_folder=os.getenv('HF_HOME', os.path.expanduser('~/.cache/huggingface'))
             )
-            logger.info("HuggingFace embeddings initialized")
+            logger.info("HuggingFace embeddings initialized successfully")
         except Exception as e:
             logger.error(f"Failed to initialize embeddings: {str(e)}")
+            logger.error("Common solutions:")
+            logger.error("1. Check if the model cache directory has proper permissions")
+            logger.error("2. Ensure sufficient disk space is available")
+            logger.error("3. Check network connectivity for model downloading")
             raise
         
         self.file_loader = FileLoader()
         self._ensure_vector_store_dir()
-        logger.info("Vector Store Service initialized")
+        logger.info("Vector Store Service initialized successfully")
+    
+    def _setup_cache_directories(self):
+        """Setup and ensure HuggingFace cache directories exist with proper permissions"""
+        cache_dirs = [
+            os.getenv('HF_HOME', os.path.expanduser('~/.cache/huggingface')),
+            os.getenv('TRANSFORMERS_CACHE', os.path.expanduser('~/.cache/huggingface/transformers')),
+            os.getenv('HF_DATASETS_CACHE', os.path.expanduser('~/.cache/huggingface/datasets'))
+        ]
+        
+        for cache_dir in cache_dirs:
+            try:
+                os.makedirs(cache_dir, exist_ok=True)
+                # Test write permissions
+                test_file = os.path.join(cache_dir, 'test_write')
+                with open(test_file, 'w') as f:
+                    f.write('test')
+                os.remove(test_file)
+                logger.debug(f"Cache directory verified: {cache_dir}")
+            except PermissionError as e:
+                logger.error(f"Permission denied for cache directory {cache_dir}: {e}")
+                raise
+            except Exception as e:
+                logger.error(f"Failed to setup cache directory {cache_dir}: {e}")
+                raise
     
     def _ensure_vector_store_dir(self):
         """Ensure vector store directory exists"""

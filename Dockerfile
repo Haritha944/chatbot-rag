@@ -38,7 +38,7 @@ RUN apt-get update && apt-get install -y \
     && apt-get clean
 
 # Create non-root user for security
-RUN groupadd -r appuser && useradd -r -g appuser appuser
+RUN groupadd -r appuser && useradd -r -g appuser -m appuser
 
 # Set working directory
 WORKDIR /app
@@ -50,10 +50,28 @@ COPY --from=builder /opt/venv /opt/venv
 COPY app/ app/
 COPY start_server.py .
 COPY requirements.txt .
+COPY entrypoint.sh .
+
+# Make entrypoint script executable
+RUN chmod +x entrypoint.sh
 
 # Create necessary directories with proper permissions
-RUN mkdir -p /app/data /app/chroma_db /app/logs && \
-    chown -R appuser:appuser /app
+RUN mkdir -p /app/data /app/chroma_db /app/logs /home/appuser/.cache && \
+    chown -R appuser:appuser /app /home/appuser/.cache
+
+# Set cache directories for HuggingFace and transformers
+ENV HF_HOME=/home/appuser/.cache/huggingface \
+    TRANSFORMERS_CACHE=/home/appuser/.cache/huggingface/transformers \
+    HF_DATASETS_CACHE=/home/appuser/.cache/huggingface/datasets \
+    PRELOAD_MODEL=false
+
+# Create HuggingFace cache directories with proper permissions
+RUN mkdir -p /home/appuser/.cache/huggingface/transformers /home/appuser/.cache/huggingface/datasets && \
+    chown -R appuser:appuser /home/appuser/.cache
+
+# Pre-download the sentence transformer model during build (optional but recommended)
+RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')" && \
+    chown -R appuser:appuser /home/appuser/.cache
 
 # Switch to non-root user
 USER appuser
@@ -66,4 +84,4 @@ HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
 # Default command
-CMD ["python", "start_server.py"]
+CMD ["./entrypoint.sh"]
